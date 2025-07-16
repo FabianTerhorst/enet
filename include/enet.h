@@ -287,7 +287,7 @@ extern "C" {
     extern ENetAcknowledgement* enet_acknowledgement_create();
     extern void enet_acknowledgement_destroy(ENetAcknowledgement* command);
     extern enet_uint32* enet_fragments_create(uint32_t fragmentCount);
-    void extern enet_fragments_destroy(enet_uint32* fragments, uint32_t fragmentCount);
+    extern void enet_fragments_destroy(enet_uint32* fragments, uint32_t fragmentCount);
 
 // =======================================================================//
 // !
@@ -801,6 +801,9 @@ extern "C" {
     /** Callback for intercepting received raw UDP packets. Should return 1 to intercept, 0 to ignore, or -1 to propagate an error. */
     typedef int (ENET_CALLBACK * ENetInterceptCallback)(struct _ENetHost *host, void *event);
 
+    /** Callback for handling connects. Should return TRUE to accept, FALSE to block. */
+    typedef BOOL (ENET_CALLBACK * ENetHandleConnectCallback)(struct _ENetHost *host, struct _ENetAddress* address, enet_uint32 data);
+
     /** An ENet host for communicating with peers.
      *
      * No fields should be modified unless otherwise stated.
@@ -848,6 +851,7 @@ extern "C" {
         enet_uint32           totalReceivedData;    /**< total data received, user should reset to 0 as needed to prevent overflow */
         enet_uint32           totalReceivedPackets; /**< total UDP packets received, user should reset to 0 as needed to prevent overflow */
         ENetInterceptCallback intercept;            /**< callback the user can set to intercept received raw UDP packets */
+        ENetHandleConnectCallback handle_connect;
         size_t                connectedPeers;
         size_t                bandwidthLimitedPeers;
         size_t                duplicatePeers;     /**< optional number of allowed peers from duplicate IPs, defaults to ENET_PROTOCOL_MAXIMUM_PEER_ID */
@@ -1048,6 +1052,7 @@ extern "C" {
     ENET_API int        enet_host_send_raw(ENetHost *, const ENetAddress *, enet_uint8 *, size_t);
     ENET_API int        enet_host_send_raw_ex(ENetHost *host, const ENetAddress* address, enet_uint8* data, size_t skipBytes, size_t bytesToSend);
     ENET_API void       enet_host_set_intercept(ENetHost *, const ENetInterceptCallback);
+    ENET_API void       enet_host_set_handle_connect(ENetHost *, const ENetHandleConnectCallback);
     ENET_API void       enet_host_flush(ENetHost *);
     ENET_API void       enet_host_broadcast(ENetHost *, enet_uint8, ENetPacket *);
     ENET_API void       enet_host_compress(ENetHost *, const ENetCompressor *);
@@ -1982,6 +1987,10 @@ extern "C" {
         }
 
         if (peer == NULL || duplicatePeers >= host->duplicatePeers) {
+            return NULL;
+        }
+
+        if (host->handle_connect != NULL && !host->handle_connect(host, &host->receivedAddress, ENET_NET_TO_HOST_32(command->connect.data))) {
             return NULL;
         }
 
@@ -4936,6 +4945,14 @@ extern "C" {
      */
     void enet_host_set_intercept(ENetHost *host, const ENetInterceptCallback callback) {
         host->intercept = callback;
+    }
+
+    /** Sets handle connect callback for the host.
+     *  @param host host to set a callback
+     *  @param callback handle connect callback
+     */
+    void enet_host_set_handle_connect(ENetHost *host, const ENetHandleConnectCallback callback) {
+        host->handle_connect = callback;
     }
 
     /** Sets the packet compressor the host should use to compress and decompress packets.
