@@ -3193,7 +3193,7 @@ extern "C" {
                             --outgoingCommand->packet->referenceCount;
 
                             if (outgoingCommand->packet->referenceCount == 0) {
-                                enet_packet_destroy(outgoingCommand->packet);
+                                callbacks.packet_destroy(outgoingCommand->packet);
                             }
 
                             enet_list_remove(& outgoingCommand->outgoingCommandList);
