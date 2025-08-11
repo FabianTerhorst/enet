@@ -247,13 +247,14 @@ extern "C" {
     typedef struct _ENetOutgoingCommand ENetOutgoingCommand;
     typedef struct _ENetIncomingCommand ENetIncomingCommand;
     typedef struct _ENetAcknowledgement ENetAcknowledgement;
+    typedef struct _ENetPeer ENetPeer;
 
     typedef struct _ENetCallbacks {
         void *(ENET_CALLBACK *malloc) (size_t size);
         void (ENET_CALLBACK *free) (void *memory);
         void (ENET_CALLBACK *no_memory) (void);
 
-        ENetPacket *         (ENET_CALLBACK *packet_create)                  (const void *data, size_t dataLength, enet_uint32 flags);
+        ENetPacket *         (ENET_CALLBACK *packet_create)                  (ENetPeer *peer, const void *data, size_t dataLength, enet_uint32 flags);
         void                 (ENET_CALLBACK *packet_destroy)                 (ENetPacket *packet);
 
         ENetChannel *        (ENET_CALLBACK *channels_create)                (size_t channelCount);
@@ -1304,7 +1305,7 @@ extern "C" {
 // !
 // =======================================================================//
 
-    ENetCallbacks callbacks = { malloc, free, abort, enet_packet_create, enet_packet_destroy, enet_channels_create, enet_channels_destroy, enet_outgoing_command_create, enet_outgoing_command_destroy, enet_incoming_command_create, enet_incoming_command_destroy, enet_acknowledgement_create, enet_acknowledgement_destroy, enet_fragments_create, enet_fragments_destroy };
+    ENetCallbacks callbacks = { malloc, free, abort, enet_packet_create_for_peer, enet_packet_destroy, enet_channels_create, enet_channels_destroy, enet_outgoing_command_create, enet_outgoing_command_destroy, enet_incoming_command_create, enet_incoming_command_destroy, enet_acknowledgement_create, enet_acknowledgement_destroy, enet_fragments_create, enet_fragments_destroy };
 
     int enet_initialize_with_callbacks(ENetVersion version, const ENetCallbacks *inits) {
         if (version < ENET_VERSION_CREATE(1, 3, 0)) {
@@ -1499,6 +1500,10 @@ extern "C" {
         packet->userData     = NULL;
 
         return packet;
+    }
+
+    ENetPacket *enet_packet_create_for_peer(ENetPeer* peer, const void *data, size_t dataLength, enet_uint32 flags) {
+        return enet_packet_create(data, dataLength, flags);
     }
 
     /** Attempts to resize the data in the packet to length specified in the
@@ -4571,7 +4576,7 @@ extern "C" {
             goto notifyError;
         }
 
-        packet = callbacks.packet_create(data, dataLength, flags);
+        packet = callbacks.packet_create(peer, data, dataLength, flags);
         if (packet == NULL) {
             goto notifyError;
         }
