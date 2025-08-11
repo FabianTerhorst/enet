@@ -603,7 +603,7 @@ extern "C" {
      * or a bitwise-or of any combination of the following flags:
      *
      *    ENET_PACKET_FLAG_RELIABLE - packet must be received by the target peer and resend attempts should be made until the packet is delivered
-     *    ENET_PACKET_FLAG_UNSEQUENCED - packet will not be sequenced with other packets (not supported for reliable packets)
+     *    ENET_PACKET_FLAG_UNSEQUENCED - packet will not be sequenced with other packets
      *    ENET_PACKET_FLAG_NO_ALLOCATE - packet will not allocate data, and user must supply it instead
      *    ENET_PACKET_FLAG_UNRELIABLE_FRAGMENT - packet will be fragmented using unreliable (instead of reliable) sends if it exceeds the MTU
      *    ENET_PACKET_FLAG_SENT - whether the packet has been sent from all queues it has been entered into
