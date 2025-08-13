@@ -803,7 +803,7 @@ extern "C" {
     typedef int (ENET_CALLBACK * ENetInterceptCallback)(struct _ENetHost *host, void *event);
 
     /** Callback for handling connects. Should return TRUE to accept, FALSE to block. */
-    typedef BOOL (ENET_CALLBACK * ENetHandleConnectCallback)(struct _ENetHost *host, struct _ENetAddress* address, enet_uint32 data);
+    typedef bool (ENET_CALLBACK * ENetHandleConnectCallback)(struct _ENetHost *host, struct _ENetAddress* address, enet_uint32 data);
 
     /** An ENet host for communicating with peers.
      *
