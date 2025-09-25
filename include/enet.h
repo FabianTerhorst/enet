@@ -253,24 +253,6 @@ extern "C" {
         void *(ENET_CALLBACK *malloc) (size_t size);
         void (ENET_CALLBACK *free) (void *memory);
         void (ENET_CALLBACK *no_memory) (void);
-
-        ENetPacket *         (ENET_CALLBACK *packet_create)                  (ENetPeer *peer, const void *data, size_t dataLength, enet_uint32 flags);
-        void                 (ENET_CALLBACK *packet_destroy)                 (ENetPacket *packet);
-
-        ENetChannel *        (ENET_CALLBACK *channels_create)                (size_t channelCount);
-        void                 (ENET_CALLBACK *channels_destroy)               (ENetChannel* channels, size_t channelCount);
-
-        ENetOutgoingCommand *(ENET_CALLBACK *outgoing_command_create)        ();
-        void                 (ENET_CALLBACK *outgoing_command_destroy)       (ENetOutgoingCommand* command);
-
-        ENetIncomingCommand *(ENET_CALLBACK *incoming_command_create)        ();
-        void                 (ENET_CALLBACK *incoming_command_destroy)       (ENetIncomingCommand* command);
-
-        ENetAcknowledgement *(ENET_CALLBACK *acknowledgement_create)         ();
-        void                 (ENET_CALLBACK *acknowledgement_destroy)        (ENetAcknowledgement* acknowledgement);
-
-        enet_uint32*         (ENET_CALLBACK *fragments_create)               (uint32_t fragmentCount);
-        void                 (ENET_CALLBACK *fragments_destroy)              (enet_uint32* fragments, uint32_t fragmentCount);
     } ENetCallbacks;
 
     extern void *enet_malloc(size_t);
@@ -279,17 +261,6 @@ extern "C" {
     extern ENetPacket* enet_packet_create_for_peer(ENetPeer*,const void*,size_t,enet_uint32);
     extern ENetPacket* enet_packet_resize(ENetPacket*, size_t);
     extern ENetPacket* enet_packet_copy(ENetPacket*);
-    extern void enet_packet_destroy(ENetPacket*);
-    extern ENetChannel* enet_channels_create(size_t channelCount);
-    extern void enet_channels_destroy(ENetChannel *channel, size_t channelCount);
-    extern ENetOutgoingCommand* enet_outgoing_command_create();
-    extern void enet_outgoing_command_destroy(ENetOutgoingCommand* command);
-    extern ENetIncomingCommand* enet_incoming_command_create();
-    extern void enet_incoming_command_destroy(ENetIncomingCommand* command);
-    extern ENetAcknowledgement* enet_acknowledgement_create();
-    extern void enet_acknowledgement_destroy(ENetAcknowledgement* command);
-    extern enet_uint32* enet_fragments_create(uint32_t fragmentCount);
-    extern void enet_fragments_destroy(enet_uint32* fragments, uint32_t fragmentCount);
 
 // =======================================================================//
 // !
@@ -806,6 +777,42 @@ extern "C" {
     /** Callback for handling connects. Should return TRUE to accept, FALSE to block. */
     typedef bool (ENET_CALLBACK * ENetHandleConnectCallback)(struct _ENetHost *host, struct _ENetAddress* address, enet_uint32 data);
 
+    /** Callback for creating packets for a peer. Should return NULL on failure. */
+    typedef ENetPacket * (ENET_CALLBACK *ENetPacketCreateCallback)(ENetPeer *peer, const void *data, size_t dataLength, enet_uint32 flags);
+
+    /** Callback for destroying packets. */
+    typedef void (ENET_CALLBACK *ENetPacketDestroyCallback)(struct _ENetHost *host, ENetPacket *packet);
+
+    /** Callback for creating channels for a peer. Should return NULL on failure. */
+    typedef ENetChannel * (ENET_CALLBACK *ENetChannelsCreateCallback)(ENetPeer *peer, size_t channelCount);
+
+    /** Callback for destroying channels. */
+    typedef void (ENET_CALLBACK *ENetChannelsDestroyCallback)(ENetPeer *peer, ENetChannel* channels, size_t channelCount);
+
+    /** Callback for creating outgoing commands. Should return NULL on failure. */
+    typedef ENetOutgoingCommand * (ENET_CALLBACK *ENetOutgoingCommndCreateCallback)(ENetPeer *peer);
+
+    /** Callback for destroying outgoing commands. */
+    typedef void (ENET_CALLBACK *ENetOutgoingCommandDestroyCallback)(ENetPeer *peer, ENetOutgoingCommand* command);
+
+    /** Callback for creating incoming commands. Should return NULL on failure. */
+    typedef ENetIncomingCommand *(ENET_CALLBACK *ENetIncomingCommandCreateCallback)(ENetPeer *peer);
+
+    /** Callback for destroying incoming commands. */
+    typedef void (ENET_CALLBACK *ENetIncomingCommandDestroyCallback)(ENetPeer *peer, ENetIncomingCommand* command);
+
+    /** Callback for creating acknowledgements. Should return NULL on failure. */
+    typedef ENetAcknowledgement * (ENET_CALLBACK *ENetAcknowledgementCreateCallback)(ENetPeer *peer);
+
+    /** Callback for destroying acknowledgements. */
+    typedef void (ENET_CALLBACK *ENetAcknowledgementDestroyCallback)(ENetPeer *peer, ENetAcknowledgement* acknowledgement);
+
+    /** Callback for creating fragment tracking arrays. Should return NULL on failure. */
+    typedef enet_uint32* (ENET_CALLBACK *ENetFragmentsCreateCallback)(ENetPeer *peer, uint32_t fragmentCount);
+
+    /** Callback for destroying fragment tracking arrays. */
+    typedef void (ENET_CALLBACK *ENetFragmentsDestroyCallback)(ENetPeer *peer, enet_uint32* fragments, uint32_t fragmentCount);
+
     /** An ENet host for communicating with peers.
      *
      * No fields should be modified unless otherwise stated.
@@ -859,6 +866,19 @@ extern "C" {
         size_t                duplicatePeers;     /**< optional number of allowed peers from duplicate IPs, defaults to ENET_PROTOCOL_MAXIMUM_PEER_ID */
         size_t                maximumPacketSize;  /**< the maximum allowable packet size that may be sent or received on a peer */
         size_t                maximumWaitingData; /**< the maximum aggregate amount of buffer space a peer may use waiting for packets to be delivered */
+        void *                data;               /**< Application private data, may be freely modified */
+        ENetPacketCreateCallback packet_create;
+        ENetPacketDestroyCallback packet_destroy;
+        ENetChannelsCreateCallback channels_create;
+        ENetChannelsDestroyCallback channels_destroy;
+        ENetOutgoingCommndCreateCallback outgoing_command_create;
+        ENetOutgoingCommandDestroyCallback outgoing_command_destroy;
+        ENetIncomingCommandCreateCallback incoming_command_create;
+        ENetIncomingCommandDestroyCallback incoming_command_destroy;
+        ENetAcknowledgementCreateCallback acknowledgement_create;
+        ENetAcknowledgementDestroyCallback acknowledgement_destroy;
+        ENetFragmentsCreateCallback fragments_create;
+        ENetFragmentsDestroyCallback fragments_destroy;
     } ENetHost;
 
     /**
@@ -1306,7 +1326,7 @@ extern "C" {
 // !
 // =======================================================================//
 
-    ENetCallbacks callbacks = { malloc, free, abort, enet_packet_create_for_peer, enet_packet_destroy, enet_channels_create, enet_channels_destroy, enet_outgoing_command_create, enet_outgoing_command_destroy, enet_incoming_command_create, enet_incoming_command_destroy, enet_acknowledgement_create, enet_acknowledgement_destroy, enet_fragments_create, enet_fragments_destroy };
+    ENetCallbacks callbacks = { malloc, free, abort };
 
     int enet_initialize_with_callbacks(ENetVersion version, const ENetCallbacks *inits) {
         if (version < ENET_VERSION_CREATE(1, 3, 0)) {
@@ -1324,60 +1344,6 @@ extern "C" {
 
         if (inits->no_memory != NULL) {
             callbacks.no_memory = inits->no_memory;
-        }
-
-        if (inits->packet_create != NULL || inits->packet_destroy != NULL) {
-            if (inits->packet_create == NULL || inits->packet_destroy == NULL) {
-                return -1;
-            }
-
-            callbacks.packet_create = inits->packet_create;
-            callbacks.packet_destroy = inits->packet_destroy;
-        }
-
-        if (inits->channels_create != NULL || inits->channels_destroy != NULL) {
-            if (inits->channels_create == NULL || inits->channels_destroy == NULL) {
-                return -1;
-            }
-
-            callbacks.channels_create = inits->channels_create;
-            callbacks.channels_destroy = inits->channels_destroy;
-        }
-
-        if (inits->outgoing_command_create != NULL || inits->outgoing_command_destroy != NULL) {
-            if (inits->outgoing_command_create == NULL || inits->outgoing_command_destroy == NULL) {
-                return -1;
-            }
-
-            callbacks.outgoing_command_create = inits->outgoing_command_create;
-            callbacks.outgoing_command_destroy = inits->outgoing_command_destroy;
-        }
-
-        if (inits->incoming_command_create != NULL || inits->incoming_command_destroy != NULL) {
-            if (inits->incoming_command_create == NULL || inits->incoming_command_destroy == NULL) {
-                return -1;
-            }
-
-            callbacks.incoming_command_create = inits->incoming_command_create;
-            callbacks.incoming_command_destroy = inits->incoming_command_destroy;
-        }
-
-        if (inits->acknowledgement_create != NULL || inits->acknowledgement_destroy != NULL) {
-            if (inits->acknowledgement_create == NULL || inits->acknowledgement_destroy == NULL) {
-                return -1;
-            }
-
-            callbacks.acknowledgement_create = inits->acknowledgement_create;
-            callbacks.acknowledgement_destroy = inits->acknowledgement_destroy;
-        }
-
-        if (inits->fragments_create != NULL || inits->fragments_destroy != NULL) {
-            if (inits->fragments_create == NULL || inits->fragments_destroy == NULL) {
-                return -1;
-            }
-
-            callbacks.fragments_create = inits->fragments_create;
-            callbacks.fragments_destroy = inits->fragments_destroy;
         }
 
         return enet_initialize();
@@ -1570,62 +1536,6 @@ extern "C" {
 
     ENetPacket *enet_packet_copy(ENetPacket *packet) {
         return enet_packet_create(packet->data, packet->dataLength, packet->flags);
-    }
-
-    /**
-     * Destroys the packet and deallocates its data.
-     * @param packet packet to be destroyed
-     */
-    void enet_packet_destroy(ENetPacket *packet) {
-        if (packet == NULL) {
-            return;
-        }
-
-        if (packet->freeCallback != NULL) {
-            (*packet->freeCallback)((void *)packet);
-        }
-
-        enet_free(packet);
-    }
-
-    ENetChannel* enet_channels_create(size_t channelCount) {
-        return (ENetChannel *)enet_malloc(sizeof (ENetChannel) * channelCount);
-    }
-
-    void enet_channels_destroy(ENetChannel *channel, size_t channelCount) {
-        enet_free(channel);
-    }
-
-    ENetOutgoingCommand* enet_outgoing_command_create() {
-        return (ENetOutgoingCommand *) enet_malloc(sizeof(ENetOutgoingCommand));
-    }
-
-    void enet_outgoing_command_destroy(ENetOutgoingCommand* command) {
-        enet_free(command);
-    }
-
-    ENetIncomingCommand* enet_incoming_command_create() {
-        return (ENetIncomingCommand *) enet_malloc(sizeof(ENetIncomingCommand));
-    }
-
-    void enet_incoming_command_destroy(ENetIncomingCommand* command) {
-        enet_free(command);
-    }
-
-    ENetAcknowledgement* enet_acknowledgement_create() {
-        return (ENetAcknowledgement *) enet_malloc(sizeof(ENetAcknowledgement));
-    }
-
-    void enet_acknowledgement_destroy(ENetAcknowledgement* command) {
-        enet_free(command);
-    }
-
-    enet_uint32* enet_fragments_create(uint32_t fragmentCount) {
-        return (enet_uint32 *) enet_malloc((fragmentCount + 31) / 32 * sizeof(enet_uint32));
-    }
-
-    void enet_fragments_destroy(enet_uint32* fragments, uint32_t fragmentCount) {
-        enet_free(fragments);
     }
 
     static int initializedCRC32 = 0;
@@ -1858,11 +1768,11 @@ extern "C" {
 
                 if (outgoingCommand->packet->referenceCount == 0) {
                     outgoingCommand->packet->flags |= ENET_PACKET_FLAG_SENT;
-                    callbacks.packet_destroy(outgoingCommand->packet);
+                    peer->host->packet_destroy(peer->host, outgoingCommand->packet);
                 }
             }
 
-            callbacks.outgoing_command_destroy(outgoingCommand);
+            peer->host->outgoing_command_destroy(peer, outgoingCommand);
         } while (!enet_list_empty(sentUnreliableCommands));
 
         if (peer->state == ENET_PEER_STATE_DISCONNECT_LATER && !enet_peer_has_outgoing_commands(peer)) {
@@ -1946,11 +1856,11 @@ extern "C" {
 
             if (outgoingCommand->packet->referenceCount == 0) {
                 outgoingCommand->packet->flags |= ENET_PACKET_FLAG_SENT;
-                callbacks.packet_destroy(outgoingCommand->packet);
+                peer->host->packet_destroy(peer->host, outgoingCommand->packet);
             }
         }
 
-        callbacks.outgoing_command_destroy(outgoingCommand);
+        peer->host->outgoing_command_destroy(peer, outgoingCommand);
 
         if (enet_list_empty(&peer->sentReliableCommands)) {
             return commandNumber;
@@ -2003,7 +1913,7 @@ extern "C" {
         if (channelCount > host->channelLimit) {
             channelCount = host->channelLimit;
         }
-        peer->channels = callbacks.channels_create(channelCount);
+        peer->channels = host->channels_create(peer, channelCount);
         if (peer->channels == NULL) {
             return NULL;
         }
@@ -3030,7 +2940,7 @@ extern "C" {
             }
 
             enet_list_remove(&acknowledgement->acknowledgementList);
-            callbacks.acknowledgement_destroy(acknowledgement);
+            host->acknowledgement_destroy(peer, acknowledgement);
 
             ++command;
             ++buffer;
@@ -3202,11 +3112,11 @@ extern "C" {
                             --outgoingCommand->packet->referenceCount;
 
                             if (outgoingCommand->packet->referenceCount == 0) {
-                                callbacks.packet_destroy(outgoingCommand->packet);
+                                host->packet_destroy(host, outgoingCommand->packet);
                             }
 
                             enet_list_remove(& outgoingCommand->outgoingCommandList);
-                            callbacks.outgoing_command_destroy(outgoingCommand);
+                            host->outgoing_command_destroy(peer, outgoingCommand);
 
                             if (currentCommand == enet_list_end (& peer->outgoingCommands)) {
                                 break;
@@ -3246,7 +3156,7 @@ extern "C" {
                 buffer->dataLength = outgoingCommand->fragmentLength;
                 host->packetSize += outgoingCommand->fragmentLength;
             } else if(! (outgoingCommand->command.header.command & ENET_PROTOCOL_COMMAND_FLAG_ACKNOWLEDGE)) {
-                callbacks.outgoing_command_destroy(outgoingCommand);
+                host->outgoing_command_destroy(peer, outgoingCommand);
             }
 
             ++peer->packetsSent;
@@ -3834,13 +3744,13 @@ extern "C" {
                     fragmentLength = packet->dataLength - fragmentOffset;
                 }
 
-                fragment = callbacks.outgoing_command_create();
+                fragment = peer->host->outgoing_command_create(peer);
 
                 if (fragment == NULL) {
                     while (!enet_list_empty(&fragments)) {
                         fragment = (ENetOutgoingCommand *) enet_list_remove(enet_list_begin(&fragments));
 
-                        callbacks.outgoing_command_destroy(fragment);
+                        peer->host->outgoing_command_destroy(peer, fragment);
                     }
 
                     return -1;
@@ -3918,10 +3828,10 @@ extern "C" {
         --packet->referenceCount;
 
         if (incomingCommand->fragments != NULL) {
-            callbacks.fragments_destroy(incomingCommand->fragments, incomingCommand->fragmentCount);
+            peer->host->fragments_destroy(peer, incomingCommand->fragments, incomingCommand->fragmentCount);
         }
 
-        callbacks.incoming_command_destroy(incomingCommand);
+        peer->host->incoming_command_destroy(peer, incomingCommand);
         peer->totalWaitingData -= ENET_MIN(peer->totalWaitingData, packet->dataLength);
 
         return packet;
@@ -3937,11 +3847,11 @@ extern "C" {
                 --outgoingCommand->packet->referenceCount;
 
                 if (outgoingCommand->packet->referenceCount == 0) {
-                    callbacks.packet_destroy(outgoingCommand->packet);
+                    peer->host->packet_destroy(peer->host, outgoingCommand->packet);
                 }
             }
 
-            callbacks.outgoing_command_destroy(outgoingCommand);
+            peer->host->outgoing_command_destroy(peer, outgoingCommand);
         }
     }
 
@@ -3966,15 +3876,15 @@ extern "C" {
                 peer->totalWaitingData -= ENET_MIN(peer->totalWaitingData, incomingCommand->packet->dataLength);
 
                 if (incomingCommand->packet->referenceCount == 0) {
-                    callbacks.packet_destroy(incomingCommand->packet);
+                    peer->host->packet_destroy(peer->host, incomingCommand->packet);
                 }
             }
 
             if (incomingCommand->fragments != NULL) {
-                callbacks.fragments_destroy(incomingCommand->fragments, incomingCommand->fragmentCount);
+                peer->host->fragments_destroy(peer, incomingCommand->fragments, incomingCommand->fragmentCount);
             }
 
-            callbacks.incoming_command_destroy(incomingCommand);
+            peer->host->incoming_command_destroy(peer, incomingCommand);
         }
     }
 
@@ -3991,7 +3901,7 @@ extern "C" {
         }
 
         while (!enet_list_empty(&peer->acknowledgements)) {
-            callbacks.acknowledgement_destroy(enet_list_remove(enet_list_begin(&peer->acknowledgements)));
+            peer->host->acknowledgement_destroy(peer, (ENetAcknowledgement*) enet_list_remove(enet_list_begin(&peer->acknowledgements)));
         }
 
         enet_peer_reset_outgoing_commands(peer, &peer->sentReliableCommands);
@@ -4005,7 +3915,7 @@ extern "C" {
                 enet_peer_reset_incoming_commands(peer, &channel->incomingUnreliableCommands);
             }
 
-            callbacks.channels_destroy(peer->channels, peer->channelCount);
+            peer->host->channels_destroy(peer, peer->channels, peer->channelCount);
         }
 
         peer->channels     = NULL;
@@ -4264,7 +4174,7 @@ extern "C" {
             }
         }
 
-        acknowledgement = callbacks.acknowledgement_create();
+        acknowledgement = peer->host->acknowledgement_create(peer);
         if (acknowledgement == NULL) {
             return NULL;
         }
@@ -4342,7 +4252,7 @@ extern "C" {
     }
 
     ENetOutgoingCommand * enet_peer_queue_outgoing_command(ENetPeer *peer, const ENetProtocol *command, ENetPacket *packet, enet_uint32 offset, enet_uint16 length) {
-        ENetOutgoingCommand *outgoingCommand = callbacks.outgoing_command_create();
+        ENetOutgoingCommand *outgoingCommand = peer->host->outgoing_command_create(peer);
 
         if (outgoingCommand == NULL) {
             return NULL;
@@ -4584,12 +4494,12 @@ extern "C" {
             goto notifyError;
         }
 
-        packet = callbacks.packet_create(peer, data, dataLength, flags);
+        packet = peer->host->packet_create(peer, data, dataLength, flags);
         if (packet == NULL) {
             goto notifyError;
         }
 
-        incomingCommand = callbacks.incoming_command_create();
+        incomingCommand = peer->host->incoming_command_create(peer);
         if (incomingCommand == NULL) {
             goto notifyError;
         }
@@ -4604,11 +4514,11 @@ extern "C" {
 
         if (fragmentCount > 0) {
             if (fragmentCount <= ENET_PROTOCOL_MAXIMUM_FRAGMENT_COUNT) {
-                incomingCommand->fragments = callbacks.fragments_create(fragmentCount);
+                incomingCommand->fragments = peer->host->fragments_create(peer, fragmentCount);
             }
 
             if (incomingCommand->fragments == NULL) {
-                callbacks.incoming_command_destroy(incomingCommand);
+                peer->host->incoming_command_destroy(peer, incomingCommand);
 
                 goto notifyError;
             }
@@ -4641,14 +4551,14 @@ extern "C" {
         }
 
         if (packet != NULL  && packet->referenceCount == 0) {
-            callbacks.packet_destroy(packet);
+            peer->host->packet_destroy(peer->host, packet);
         }
 
         return &dummyCommand;
 
     notifyError:
         if (packet != NULL && packet->referenceCount == 0) {
-            callbacks.packet_destroy(packet);
+            peer->host->packet_destroy(peer->host, packet);
         }
 
         return NULL;
@@ -4757,6 +4667,18 @@ extern "C" {
         host->compressor.decompress         = NULL;
         host->compressor.destroy            = NULL;
         host->intercept                     = NULL;
+        host->packet_create                 = NULL;
+        host->packet_destroy                = NULL;
+        host->channels_create               = NULL;
+        host->channels_destroy              = NULL;
+        host->incoming_command_create       = NULL;
+        host->incoming_command_destroy      = NULL;
+        host->outgoing_command_create       = NULL;
+        host->outgoing_command_destroy      = NULL;
+        host->acknowledgement_create        = NULL;
+        host->acknowledgement_destroy       = NULL;
+        host->fragments_create              = NULL;
+        host->fragments_destroy             = NULL;
 
         enet_list_clear(&host->dispatchQueue);
 
@@ -4840,7 +4762,7 @@ extern "C" {
             return NULL;
         }
 
-        currentPeer->channels = enet_channels_create(channelCount);
+        currentPeer->channels = host->channels_create(currentPeer, channelCount);
         if (currentPeer->channels == NULL) {
             return NULL;
         }
@@ -4914,7 +4836,7 @@ extern "C" {
         }
 
         if (packet->referenceCount == 0) {
-            callbacks.packet_destroy(packet);
+            host->packet_destroy(host, packet);
         }
     }
 
